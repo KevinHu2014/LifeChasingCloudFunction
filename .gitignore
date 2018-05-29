@@ -1,0 +1,6 @@
+# dependencies
+functions/node_modules
+
+.firebaserc
+firebase.json
+firebase-debug.log

@@ -2,12 +2,11 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 var polyUtil = require('polyline-encoded');
 var axios = require('axios');
+var _ = require('lodash');
 
 admin.initializeApp();
 var temp = [];
 var marker = [];
-var latStart = 0;
-var lonStart = 0;
 
 function distance(lat1, lon1, lat2, lon2, unit) {
 	var radlat1 = Math.PI * lat1/180
@@ -26,13 +25,14 @@ function distance(lat1, lon1, lat2, lon2, unit) {
 function add_dot(startLat, startLon, endLat, endLon) {
   var midLat = (startLat + endLat) / 2;
   var midLon = (startLon + endLon) / 2;
-  if(distance(startLat, startLon, endLat, endLon, "K") > 0.005) {
+  // 如果距離大於 0.0005 公里，則繼續找中點
+  if(distance(startLat, startLon, endLat, endLon, "K") > 0.0005) {
     add_dot(startLat, startLon, midLat, midLon);
     add_dot(midLat, midLon, endLat, endLon);
   }
   // console.log([midLat, midLon]);
   // temp.push([midLat, midLon]);
-  temp.push({ id: Math.floor(Math.random() * 10000) + 1, longitude: midLon, latitude: midLat, dist: distance(latStart, lonStart, midLat, midLon, 'K') })
+  temp.push({ id: midLon.toString().concat(midLat.toString()), longitude: midLon, latitude: midLat })
   return temp;
 }
 
@@ -48,8 +48,6 @@ exports.markerGenerator = functions.database.ref('/marker').onCreate((snap, cont
   console.log(snap.val());
   let innerData = Object_values(snap.val())[0];
   // console.log(innerData.key);
-  latStart = innerData.startLat;
-  lonStart = innerData.startLon;
   console.log(innerData.startLat);
   console.log(innerData.endLat);
   return new Promise((resolve, reject) => {
@@ -72,26 +70,29 @@ exports.markerGenerator = functions.database.ref('/marker').onCreate((snap, cont
             return true;
           }
         );
-         // sort by latitude
-         temp.sort((a, b) => {
-          return a.latitude - b.latitude;
-        });
+
+        // 去除相同的點
+        temp = _.uniqBy(temp, 'id');
+
         return true;
       }
       console.log('faillllll');
       return true;
     })
     .then(() => {
-      marker.push(temp[0]);
-      var j = 0;
-      for(var i = 1; i < temp.length; i++) {
-        // 移除小於 0.1 KM 的點
-        var dist = Math.round(distance(marker[j].latitude, marker[j].longitude, temp[i].latitude, temp[i].longitude, "K") * 1000) / 1000;
-        console.log(dist);
-        if (dist > 0.1) {
-            marker.push(temp[i]);
-            j += 1;
+      // 去除距離太近的點
+      var k = temp.length;
+      for(var i = 0; i < k ; i++) {
+        for (var j = i + 1; j < k ; ) {
+          var dist = Math.round(distance(temp[i].latitude, temp[i].longitude, temp[j].latitude, temp[j].longitude, "K") * 1000) / 1000;
+          // 去除距離小於 0.0035的點
+          if (dist < 0.0035) {
+            temp.splice(j, 1);
+            k = temp.length;
+          } else {
+            j++;
           }
+        }
       }
       return true;
     })
@@ -103,8 +104,8 @@ exports.markerGenerator = functions.database.ref('/marker').onCreate((snap, cont
         // startLon: snap.val().startLon,
         // endLat: snap.val().endLat,
         // endLon: snap.val().endLon,
-        data: marker,
-        dots: marker.length,
+        data: temp,
+        dots: temp.length,
       });
     })
     .catch((err) => {

@@ -10,10 +10,11 @@
     "logs": "firebase functions:log"
   },
   "dependencies": {
+    "axios": "^0.18.0",
     "firebase-admin": "^5.12.1",
     "firebase-functions": "^1.0.3",
-    "polyline-encoded": "0.0.8",
-    "axios": "^0.18.0"
+    "lodash": "^4.17.10",
+    "polyline-encoded": "0.0.8"
   },
   "devDependencies": {
     "eslint": "^4.12.0",

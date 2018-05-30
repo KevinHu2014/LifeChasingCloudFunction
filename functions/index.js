@@ -5,6 +5,9 @@ var axios = require('axios');
 
 admin.initializeApp();
 var temp = [];
+var marker = [];
+var latStart = 0;
+var lonStart = 0;
 
 function distance(lat1, lon1, lat2, lon2, unit) {
 	var radlat1 = Math.PI * lat1/180
@@ -29,7 +32,7 @@ function add_dot(startLat, startLon, endLat, endLon) {
   }
   // console.log([midLat, midLon]);
   // temp.push([midLat, midLon]);
-  temp.push({ id: Math.floor(Math.random() * 10000) + 1, longitude: midLon, latitude: midLat })
+  temp.push({ id: Math.floor(Math.random() * 10000) + 1, longitude: midLon, latitude: midLat, dist: distance(latStart, lonStart, midLat, midLon, 'K') })
   return temp;
 }
 
@@ -45,6 +48,8 @@ exports.markerGenerator = functions.database.ref('/marker').onCreate((snap, cont
   console.log(snap.val());
   let innerData = Object_values(snap.val())[0];
   // console.log(innerData.key);
+  latStart = innerData.startLat;
+  lonStart = innerData.startLon;
   console.log(innerData.startLat);
   console.log(innerData.endLat);
   return new Promise((resolve, reject) => {
@@ -67,9 +72,27 @@ exports.markerGenerator = functions.database.ref('/marker').onCreate((snap, cont
             return true;
           }
         );
+         // sort by latitude
+         temp.sort((a, b) => {
+          return a.latitude - b.latitude;
+        });
         return true;
       }
       console.log('faillllll');
+      return true;
+    })
+    .then(() => {
+      marker.push(temp[0]);
+      var j = 0;
+      for(var i = 1; i < temp.length; i++) {
+        // 移除小於 0.1 KM 的點
+        var dist = Math.round(distance(marker[j].latitude, marker[j].longitude, temp[i].latitude, temp[i].longitude, "K") * 1000) / 1000;
+        console.log(dist);
+        if (dist > 0.1) {
+            marker.push(temp[i]);
+            j += 1;
+          }
+      }
       return true;
     })
     .then(() => {
@@ -80,8 +103,8 @@ exports.markerGenerator = functions.database.ref('/marker').onCreate((snap, cont
         // startLon: snap.val().startLon,
         // endLat: snap.val().endLat,
         // endLon: snap.val().endLon,
-        data: temp,
-        dots: temp.length,
+        data: marker,
+        dots: marker.length,
       });
     })
     .catch((err) => {

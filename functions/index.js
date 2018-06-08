@@ -114,3 +114,8 @@ exports.markerGenerator = functions.database.ref('/marker').onCreate((snap, cont
     });
   });
 });
+
+exports.getFitbitData = functions.database.ref('/game/{gameKey}/timeSpent').onCreate((snap) => {
+  console.log(snap.val());
+  return true;
+});

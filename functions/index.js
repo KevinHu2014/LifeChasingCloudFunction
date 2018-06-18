@@ -117,5 +117,10 @@ exports.markerGenerator = functions.database.ref('/marker').onCreate((snap, cont
 
 exports.getFitbitData = functions.database.ref('/game/{gameKey}/timeSpent').onCreate((snap) => {
   console.log(snap.val());
+  console.log(Object.keys(snap.val()));
+  admin.database().ref('game/' + Object.keys(snap.val())).once('value', (snapshot) => {
+      var event = snapshot.val();
+      console.log(event);
+  });
   return true;
 });

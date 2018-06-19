@@ -157,8 +157,8 @@ exports.getFitbitData = functions.database.ref('/game/{gameKey}/timeSpent').onCr
           .then((hr) => {
             console.log(hr.data);
             console.log(hr.data['activities-heart'][0]['value']);
-            return snap.ref.child(path).update({
-              heartRate: (hr.data['activities-heart'][0]['value'] + 10)
+            return admin.database().ref(path).update({
+              heartRate: hr.data['activities-heart'][0]['value']
             });
           })
           .catch((error) => {

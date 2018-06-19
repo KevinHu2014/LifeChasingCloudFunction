@@ -115,29 +115,56 @@ exports.markerGenerator = functions.database.ref('/marker').onCreate((snap, cont
   });
 });
 
-exports.getFitbitData = functions.database.ref('/game/{gameKey}/timeSpent').onCreate((snap) => {
+exports.getFitbitData = functions.database.ref('/game/{gameKey}/timeSpent').onCreate((snap, context) => {
   console.log(snap.val());
-  console.log(Object.keys(snap.val()));
+
   var date = '';
   var startTime = '';
   var endTime = '';
-  var timeSpent = Object_values(snap.val())[0].timeSpent;
+  var path = snap._path.substring(0, snap._path.length -9);
 
-  admin.database().ref('game/' + Object.keys(snap.val())).once('value', (snapshot) => {
+  admin.database().ref(path).once('value', (snapshot) => {
       var event = snapshot.val();
+      console.log(event);
       // 2013-03-10T02:00:00Z
       var start_time = new Date(event.startTime);
       // 2013-03-10
       date = start_time.toISOString().substring(0, 10);
       // 02:00
       startTime = start_time.toISOString().substring(11, 16);
-      var end_time = new Date((event.startTime + timeSpent));
+      var end_time = new Date((event.startTime + event.timeSpent));
       // 02:00 + timeSpent
       endTime = end_time.toISOString().substring(11, 16);
       console.log(date);
       console.log(startTime);
       console.log(endTime);
-      console.log(event);
+
+      var fitbitColor = event.fitbit;
+      var fitbit_access_token = '';
+
+      if (fitbitColor === 'Blue' || fitbitColor === '藍色') {
+        fitbit_access_token = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2M0g0VDUiLCJhdWQiOiIyMkNTN04iLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJ3aHIgd3BybyB3YWN0IiwiZXhwIjoxNTU4MDEyMDA4LCJpYXQiOjE1MjY0NzYwMDh9.Ro4Zc3R_Kuz-9fqKL527bm3N8ayWTdwBfDo3hoyA0aE';
+      } else if (fitbitColor === 'Black' || fitbitColor === '黑色') {
+        fitbit_access_token = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0Q0pZRFQiLCJhdWQiOiIyMjdRTk0iLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJ3aHIgd3BybyB3YWN0IiwiZXhwIjoxNTU4MDA0NDg4LCJpYXQiOjE1MjY0NzAzNjR9.lKWPVxROR-xxWlj9y6mU-fQPUX4Vvx6kYUnY3LQRTQY';
+      }
+
+      if (fitbit_access_token.length > 0) {
+        axios.get(`https://api.fitbit.com/1/user/-/activities/heart/date/${date}/1d/1sec/time/${startTime}/${endTime}.json`, {
+          headers: {
+          'Authorization': `Bearer ${fitbit_access_token}`
+        },
+          })
+          .then((hr) => {
+            console.log(hr.data);
+            console.log(hr.data['activities-heart'][0]['value']);
+            return snap.ref.child(path).update({
+              heartRate: (hr.data['activities-heart'][0]['value'] + 10)
+            });
+          })
+          .catch((error) => {
+            console.error(error)
+          });
+      }
   });
   return true;
 });

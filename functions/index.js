@@ -118,8 +118,25 @@ exports.markerGenerator = functions.database.ref('/marker').onCreate((snap, cont
 exports.getFitbitData = functions.database.ref('/game/{gameKey}/timeSpent').onCreate((snap) => {
   console.log(snap.val());
   console.log(Object.keys(snap.val()));
+  var date = '';
+  var startTime = '';
+  var endTime = '';
+  var timeSpent = Object_values(snap.val())[0].timeSpent;
+
   admin.database().ref('game/' + Object.keys(snap.val())).once('value', (snapshot) => {
       var event = snapshot.val();
+      // 2013-03-10T02:00:00Z
+      var start_time = new Date(event.startTime);
+      // 2013-03-10
+      date = start_time.toISOString().substring(0, 10);
+      // 02:00
+      startTime = start_time.toISOString().substring(11, 16);
+      var end_time = new Date((event.startTime + timeSpent));
+      // 02:00 + timeSpent
+      endTime = end_time.toISOString().substring(11, 16);
+      console.log(date);
+      console.log(startTime);
+      console.log(endTime);
       console.log(event);
   });
   return true;
